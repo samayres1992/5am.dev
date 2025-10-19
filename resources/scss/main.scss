@@ -7,6 +7,7 @@ html {
 
 html, body {
   font-family: 'Lora', serif, Arial!important;
+  background-color: #0f022e;
 }
 
 h1, h2, h3, h4, a, nav li, .tags span, .date, .cd-timeline__date  {
@@ -284,6 +285,17 @@ header.landing {
 
   .show-off {
     z-index: 10;
+    @media screen and (max-width: 1200px) {
+      .columns {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .column {
+        flex: 1 1 100%;
+        max-width: 600px;
+      }
+    }
     img {
       display: none;
     }
@@ -295,21 +307,9 @@ header.landing {
     }
     .locc-it {
       background-color: #4b6cb7;
-      @media only screen and (max-width: 1087px) {
-        height: 450px;
-        .intro {
-            height: 75px;
-        }
-      }
     }
     .lucy-yin {
       background-color: #36465d;
-      @media only screen and (max-width: 1087px) {
-        height: 450px;
-        .intro {
-             height: 75px;
-        }
-      }
     }
     .treorchy {
       background-color: #d16a88;

@@ -6,6 +6,7 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.7.2",
+    "@vitejs/plugin-basic-ssl": "^2.1.0",
     "bulma": "^0.7.4",
     "bulma-tooltip": "^2.0.2",
     "gulp-concat": "^2.6.1",
@@ -19,12 +20,12 @@
     "@tailwindcss/typography": "^0.4.0",
     "autoprefixer": "^10.2.5",
     "cssnano": "^5.0.2",
-    "gulp": "^4.0.0",
+    "gulp": "^4.0.2",
     "gulp-sass": "^5.1.0",
     "postcss": "^8.2.13",
     "push-dir": "^0.4.1",
     "sass": "^1.53.0",
     "tailwindcss": "^2.2.19",
-    "vite": "^2.2.3"
+    "vite": "^7.1.10"
   }
 }

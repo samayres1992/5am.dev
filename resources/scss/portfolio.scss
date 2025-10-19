@@ -1,6 +1,6 @@
 // variables
 $card-width: 100%;
-$card-height: 525px;
+$card-height: 480px;
 $h-color: #9CC9E3;
 $yellow: #D0BB57;
 $txt-color: #DCE3E7;
@@ -56,7 +56,9 @@ h2 {
     box-shadow: 3px 3px 20px rgba(0, 0, 0, .5);
     text-align: center;
     position: relative;
-
+    @media screen and (max-width: 1200px) {
+        height: 400px;
+    }
     h2 {
         color: #fff;
         padding: 1em 1em 0em 1em;
@@ -67,6 +69,10 @@ h2 {
             font-size: 2em;
             padding: 1em 0.5em 0em 0.5em;
         }
+    }
+
+    .intro {
+      height: 120px;
     }
 
     &.locc-it {
@@ -80,7 +86,7 @@ h2 {
     .content-links {
         position: absolute;
         width: 100%;
-        bottom: 65px;
+        bottom: 20px;
 
         a {
             font-size: 3em;
