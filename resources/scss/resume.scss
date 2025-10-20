@@ -45,13 +45,13 @@ h1 {
   font-weight: 800;
   margin-bottom: 0.25rem;
   letter-spacing: -0.025em;
+  line-height: 1em;
 }
 
 h2 {
   font-size: 1.25rem;
   font-weight: 600;
   color: #718096;
-  margin-bottom: 1.5rem;
 }
 
 h3 {
@@ -72,7 +72,7 @@ h4 {
 }
 
 p {
-  line-height: 1.7;
+  line-height: 1.5;
   font-size: 1.1rem;
   margin-bottom: 1rem;
 }
@@ -91,7 +91,7 @@ a {
 /* Sidebar */
 #sidebar {
   padding: 2rem 0;
-  flex: 1 1 32%;
+  flex: 1 1 43%;
 
   @media (min-width: 1024px) {
     border-left: 1px solid #e5e7eb;
@@ -106,8 +106,7 @@ a {
   color: #3273dc;
   margin-top: 2rem;
   margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  padding-left: 0.5rem;
+  padding: 0.5rem 0 0.5rem 0.5rem;
   border-left: 8px solid #3273dc;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -120,7 +119,7 @@ a {
 /* Main Content */
 main {
   padding: 2rem 0;
-  flex: 1 1 68%;
+  flex: 1 1 57%;
 
   @media (min-width: 1024px) {
     padding-right: 2rem;
@@ -183,7 +182,10 @@ section {
     color: #718096;
     font-style: italic;
     font-size: 0.95rem;
-    margin-left: 0.5rem;
+  }
+
+  .bullet {
+    margin: 0 0.5rem;
   }
 }
 
@@ -201,7 +203,7 @@ ul {
 
   li {
     margin-bottom: 0.75rem;
-    line-height: 1.7;
+    line-height: 1.5;
     padding-left: 0.5rem;
     font-size: 1.1rem;
 
@@ -215,7 +217,7 @@ ul {
 .contact-info {
   color: #4a5568;
   font-size: 0.95rem;
-  line-height: 1.4;
+  line-height: 1.5;
 
   a {
     color: #3273dc;
