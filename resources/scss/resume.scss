@@ -264,18 +264,154 @@ strong {
 
 /* Print Styles */
 @media print {
-  body {
+  @page {
+    size: A4;
+    margin: 12mm 15mm 12mm 15mm;
+  }
+
+  html, body {
     background: #fff;
+    padding: 0;
+    font-size: 9.5pt;
+    line-height: 1.4;
+  }
+
+  body {
     padding: 0;
   }
 
-  .skill-tag {
-    background-color: #3273dc !important;
-    -webkit-print-color-adjust: exact;
+  h1 {
+    font-size: 20pt;
+  }
+
+  h2 {
+    font-size: 11pt;
+  }
+
+  h3 {
+    font-size: 9.5pt;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.3rem;
+  }
+
+  h4 {
+    font-size: 9.5pt;
+    margin-top: 0.75rem;
+  }
+
+  p {
+    font-size: 9pt;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+  }
+
+  ul {
+    margin: 0.5rem 0 0.75rem 1rem;
+
+    li {
+      font-size: 9pt;
+      margin-bottom: 0.4rem;
+      line-height: 1.4;
+    }
+  }
+
+  .container {
+    max-width: 100%;
   }
 
   #wrapper {
-    gap: 2rem;
+    flex-direction: row;
+    gap: 1.5rem;
+  }
+
+  main {
+    padding: 0;
+    padding-right: 1.5rem;
+  }
+
+  #sidebar {
+    padding: 0;
+    padding-left: 1.5rem;
+  }
+
+  section {
+    margin-bottom: 1rem;
+  }
+
+  .company-header {
+    page-break-inside: avoid;
+    margin-bottom: 0.2rem;
+
+    .company-name {
+      font-size: 9.5pt;
+    }
+
+    .current-role {
+      font-size: 9.5pt;
+    }
+
+    .current-date {
+      font-size: 8.5pt;
+    }
+  }
+
+  .client-list {
+    font-size: 8.5pt;
+    margin-bottom: 0.5rem;
+  }
+
+  .role-desc {
+    font-size: 8.5pt;
+  }
+
+  .section-headline {
+    font-size: 8.5pt;
+    margin-top: 1rem;
+    padding: 0.3rem 0 0.3rem 0.4rem;
+  }
+
+  .skill-category {
+    font-size: 8.5pt;
+    margin-top: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .skills {
+    gap: 0.3rem;
+    margin-bottom: 0.5rem;
+    max-width: 100%;
+  }
+
+  .skill-tag {
+    font-size: 7.5pt;
+    padding: 2px 6px;
+    background-color: #3273dc !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  h1, h2, h3, h4, .company-name, .section-headline {
+    color: #3273dc !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  ul li::marker {
+    color: #3273dc !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #sidebar {
+    border-left: 1px solid #e5e7eb !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  a {
+    color: #3273dc !important;
+    text-decoration: none;
   }
 }
 
