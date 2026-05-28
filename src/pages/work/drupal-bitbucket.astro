@@ -1,0 +1,197 @@
+---
+import CaseStudy from '../../layouts/CaseStudy.astro';
+import Diagram from '../../components/Diagram.astro';
+import DiagramNode from '../../components/DiagramNode.astro';
+
+const links = [
+  { label: 'GitHub', url: 'https://github.com/samayres1992/Drupal-Bitbucket-integration' },
+];
+---
+
+<CaseStudy
+  title="Drupal → Bitbucket Automation"
+  tag="Personal"
+  role="Sole engineer"
+  timeframe="2018"
+  stack="PHP · Drupal 7 · Bitbucket REST API · OAuth2"
+  oneliner="A Drupal module that turns 'create a project node in the intranet' into 'a fully provisioned, permission-restricted Bitbucket repository with the team's workflow already enforced'. Written at an agency in 2018 to make the right thing the easy thing."
+  links={links}
+>
+
+  <p class="lede">
+    Every new project at the agency needed a Bitbucket repo with the same setup: a private repo, three standard branches, a PR webhook back to the intranet bot, push restrictions on the main branches, two-approval requirement for merges to master and staging, and per-role merge permissions. Doing all of that by hand for every project meant juniors occasionally merged straight to master and PRs sometimes shipped without review. I wrote a Drupal module that did the whole setup automatically the moment a PM clicked Save on a new project node.
+  </p>
+
+  <h2>The problem</h2>
+
+  <p>
+    The team had a documented workflow: develop → staging → master, two approvals required, no direct pushes to the main branches, no force-pushing, no deletes. The documentation was good. The enforcement was inconsistent.
+  </p>
+
+  <p>
+    Every new project needed someone to remember to apply that workflow when they set up the repo. Under deadline pressure, with a senior engineer doing the click-through alongside everything else, steps got skipped. Sometimes a junior would be onboarded onto a project before branch restrictions were in place, would push to master because the rule wasn't there to stop them, and the next person to clone the repo would inherit the surprise. Not because anyone wanted to break the rules, but because the rules lived in a wiki rather than in the system.
+  </p>
+
+  <p>
+    The brief I gave myself was small: <strong>encode the workflow in code, hook it into the moment a project is created, and remove the human step entirely</strong>.
+  </p>
+
+  <h2>The architecture</h2>
+
+  <p>
+    The agency's intranet ran on Drupal 7, with a "site" content type that captured every client project. The natural place to hook automation was the moment that node was created. The module implements <code>hook_node_insert</code>, authenticates against Bitbucket using OAuth2 client credentials (no service-user impersonation, no per-user tokens), and then provisions the repo, webhook, branches, and restrictions in sequence.
+  </p>
+
+  <Diagram title="Project node to provisioned repo">
+    <div class="overview">
+      <div class="overview-col">
+        <div class="overview-tier">
+          <DiagramNode label="PM creates 'site' node" sublabel="Drupal intranet" tier="input" />
+          <DiagramNode label="hook_node_insert" sublabel="Drupal 7" tier="input" />
+          <DiagramNode label="OAuth2 token" sublabel="client_credentials" tier="input" />
+        </div>
+        <div class="overview-arrow">↓</div>
+        <div class="overview-tier">
+          <DiagramNode label="Create repo" sublabel="private, slug from title" tier="accent" size="lg" />
+          <DiagramNode label="Add PR webhook" sublabel="back to intranet bot" tier="accent" size="lg" />
+          <DiagramNode label="Create branches" sublabel="master · staging · develop" tier="accent" size="lg" />
+        </div>
+        <div class="overview-arrow">↓</div>
+        <div class="overview-tier">
+          <DiagramNode label="Push-restricted" sublabel="admin group only" tier="output" />
+          <DiagramNode label="2 approvals to merge" sublabel="master + staging" tier="output" />
+          <DiagramNode label="Per-role merge perms" sublabel="dev / junior / reviewer" tier="output" />
+        </div>
+      </div>
+    </div>
+  </Diagram>
+
+  <h3>Authentication</h3>
+  <p>
+    The module authenticates with Bitbucket using the <strong>OAuth2 client credentials</strong> grant. There's no service-account user, no personal token sitting in a config file, no impersonation of a human. The intranet has a Bitbucket OAuth app, the client ID and secret live in a <code>.env</code> file alongside the module, and every API call presents a freshly-issued bearer token. If someone steals an old token, it's already expired.
+  </p>
+
+  <h3>Provisioning</h3>
+  <p>
+    The repo name is slugified from the project node's title (or an explicit field if the PM has set one), lowercased and stripped of non-alphanumerics so it's a valid Bitbucket slug. The module creates the repo as private, then immediately adds a PR webhook that points back at the intranet, with a shared-secret query parameter so the intranet can verify the call is genuine. The webhook subscribes to every PR event the team cared about: created, updated, comment created/updated/deleted, approved, unapproved, rejected, fulfilled. From there the intranet bot handles the PR-as-a-conversation flow inside the agency's existing tools.
+  </p>
+
+  <h3>Branch restrictions</h3>
+  <p>
+    Three branches get created up front: <code>master</code>, <code>staging</code>, <code>develop</code>. Each one gets the same set of protections:
+  </p>
+  <ul>
+    <li><strong>Push-restricted</strong> to the admin group only — no direct pushes from developers, juniors, or reviewers</li>
+    <li><strong>Two approvals required</strong> for any merge to <code>master</code> or <code>staging</code></li>
+    <li><strong>Delete-protected</strong> so nobody can wipe a main branch by accident</li>
+    <li><strong>Per-group merge permissions</strong> so the developer, junior, and reviewer groups merge through the right gates</li>
+  </ul>
+  <p>
+    These are the same rules that lived in the agency's documentation. The module's contribution wasn't writing them; it was making it impossible to skip them.
+  </p>
+
+  <h2>Key decisions</h2>
+
+  <h3>Encode the workflow, don't document it</h3>
+  <p>
+    Rules-as-docs work when humans remember them under pressure. Rules-as-code work whether anyone remembered them or not. Every protection the workflow asked for was already documented; the gain wasn't the policy, it was the enforcement. The module's value is that there's no longer a way to bypass it short of editing the module itself.
+  </p>
+
+  <h3>Hook the node lifecycle, not a separate UI</h3>
+  <p>
+    A standalone "provision a repo" admin page would have been another step in the workflow, and another step is another opportunity to forget. PMs were already creating project nodes; making the repo provision off that existing action meant zero new behaviour to learn. The integration is invisible until something goes wrong, which is what good plumbing is supposed to feel like.
+  </p>
+
+  <h3>OAuth2 client credentials, not a service user</h3>
+  <p>
+    The lazy option was to create a fake "deploy" Bitbucket user and reuse their personal access token. That works until it doesn't: the user's account gets disabled, password expires, MFA gets enforced. Using the OAuth2 app + client credentials grant meant no human account anywhere in the auth path, and tokens that expire automatically.
+  </p>
+
+  <h2>Outcomes</h2>
+
+  <div class="outcome-grid">
+    <div><strong>Zero</strong><span>Manual repo setup steps</span></div>
+    <div><strong>One click</strong><span>From project node to ready-to-clone repo</span></div>
+    <div><strong>Enforced</strong><span>Workflow now ran in code, not in wiki pages</span></div>
+  </div>
+
+  <p>
+    The outcome that mattered most: junior developers stopped occasionally landing in production by accident. Not because they got better at the rules, but because the rules were finally in the path. A senior reviewer no longer had to remember to set up restrictions before onboarding the next person; the protections were live from the moment the repo existed.
+  </p>
+
+  <h2>What I'd do differently</h2>
+
+  <p>
+    The OAuth credentials lived in a <code>.env</code> file on disk rather than in a Drupal admin form. Adding a config UI would let an ops engineer rotate the OAuth app credentials without touching the server, and would surface the integration in the admin tree where the rest of the system's settings already lived.
+  </p>
+
+  <p>
+    Drupal 7 reached end-of-life in January 2025, so the module is now a portfolio artifact rather than a live piece of infrastructure. Re-implementing the same pattern as a GitHub Actions workflow (or as a small webhook receiver in front of any modern repo host) would keep the idea alive: encode the workflow, run it on every new project, never trust a human to remember.
+  </p>
+
+</CaseStudy>
+
+<style>
+  .overview {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+  }
+
+  .overview-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    width: 100%;
+  }
+
+  .overview-tier {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .overview-arrow {
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    color: var(--teal);
+    line-height: 1;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 1.5rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  ul li {
+    position: relative;
+    padding-left: 1.25rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+  }
+
+  ul li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--teal);
+    font-family: var(--font-mono);
+  }
+
+  ul li strong {
+    color: var(--ink);
+  }
+
+  @media (max-width: 600px) {
+    .overview-tier {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+  }
+</style>
