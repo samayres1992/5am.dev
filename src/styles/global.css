@@ -1,0 +1,137 @@
+:root {
+  --bg: #0e0f10;
+  --bg-2: #16181a;
+  --bg-deep: #0a0b0c;
+  --ink: #f5f3ee;
+  --ink-soft: #8a8680;
+  --teal: #5fc8c8;
+  --teal-dim: #2a6d6d;
+  --amber: #e8a55c;
+  --line: #26282c;
+
+  --font-display: 'Canela Deck', 'Fraunces', 'Times New Roman', serif;
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Menlo', monospace;
+
+  --container-max: 75rem;
+  --container-pad-desktop: 3rem;
+  --container-pad-mobile: 1.5rem;
+
+  /* Uniform vertical space above and below every content section */
+  --section-pad: clamp(3.5rem, 8vw, 6rem);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Horizon beam moved to .beam element for reliable stacking */
+
+main {
+  position: relative;
+  z-index: 1;
+}
+
+/* Viewport-anchored fade — translucent dark layer that softens content as it approaches the beam */
+.top-fade {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6.25rem;
+  background: linear-gradient(
+    180deg,
+    rgba(14, 15, 16, 0.6) 0%,
+    rgba(14, 15, 16, 0.4) 40%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Beam: glowing line at top of viewport — always visible above everything */
+.beam {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 15rem;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.beam-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(95, 200, 200, 1) 50%,
+    transparent 100%
+  );
+  box-shadow: 0 0 12px rgba(95, 200, 200, 0.6);
+}
+
+.beam-glow {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  right: 0;
+  height: 15rem;
+  background: linear-gradient(
+    180deg,
+    rgba(95, 200, 200, 0.12) 0%,
+    transparent 100%
+  );
+}
+
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--container-pad-desktop);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 0 var(--container-pad-mobile);
+  }
+}

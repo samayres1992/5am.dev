@@ -1,0 +1,165 @@
+---
+import CaseStudy from '../../layouts/CaseStudy.astro';
+import Diagram from '../../components/Diagram.astro';
+import DiagramNode from '../../components/DiagramNode.astro';
+---
+
+<CaseStudy
+  title="Timeline Generator"
+  tag="Internal"
+  role="Director of Technology"
+  timeframe="2025"
+  stack="Flask · openpyxl · ReportLab · Tailwind"
+  oneliner="A small internal web app that turns flat Excel project exports into color-coded waterfall reports, downloadable as an editable Excel for the project manager and a polished PDF for the client."
+>
+
+  <p class="lede">
+    Every client engagement ends up in a status doc or a deck. The data that drives those decks lives in a project tracker as flat rows of tasks, dates, and owners, useful to a project manager but the wrong shape for a client. The Timeline Generator translates one into the other automatically: upload a task export, get back a quarter-grouped, color-coded waterfall as both an editable Excel and a finished PDF.
+  </p>
+
+  <h2>The problem</h2>
+
+  <p>
+    Project managers were spending hours each week translating task lists into client-facing waterfall charts. The data was already structured. The manual work was reshaping it into a timeline, applying phase colors, marking holidays, exporting to PDF, and doing it all again the next time the schedule moved.
+  </p>
+
+  <p>
+    Every team had a slightly different Excel template. Some used flat tables with named columns, some used sectioned layouts with section headers and repeating timeline rows, some used positional formats from the project tracker's default export. Any tool that demanded a single canonical shape would fail on contact with the real files. The tool had to bend to the templates, not the other way around.
+  </p>
+
+  <p>
+    The brief I gave myself: <strong>given any reasonable Excel export of a project plan, produce the waterfall a careful project manager would build by hand, as both an editable Excel and a polished PDF</strong>.
+  </p>
+
+  <h2>The architecture</h2>
+
+  <p>
+    Timeline Generator is a Flask web app behind nginx on EC2. The flow is the obvious one: a project manager uploads one or more Excel files, the server parses them, applies phase colors and holiday blocks from a config file, and generates both an Excel and a PDF report. The PM downloads either or both. There's a Server-Sent Events progress stream so the long-running parse and render don't look like a frozen browser tab.
+  </p>
+
+  <Diagram title="Upload to report">
+    <div class="overview">
+      <div class="overview-col">
+        <div class="overview-tier">
+          <DiagramNode label="Excel upload" sublabel=".xlsx tasks" tier="input" />
+          <DiagramNode label="Phase config" sublabel="colors + labels" tier="input" />
+          <DiagramNode label="Holiday config" sublabel="dates + ranges" tier="input" />
+        </div>
+        <div class="overview-arrow">↓</div>
+        <div class="overview-tier">
+          <DiagramNode label="Parse" sublabel="openpyxl · heuristics" tier="accent" size="lg" />
+          <DiagramNode label="Style" sublabel="phase coloring" tier="accent" size="lg" />
+          <DiagramNode label="Render" sublabel="Excel · PDF" tier="accent" size="lg" />
+        </div>
+        <div class="overview-arrow">↓</div>
+        <div class="overview-tier">
+          <DiagramNode label=".xlsx" sublabel="for the PM" tier="output" />
+          <DiagramNode label=".pdf" sublabel="for the client" tier="output" />
+          <DiagramNode label="Web preview" sublabel="in-app" tier="output" />
+        </div>
+      </div>
+    </div>
+  </Diagram>
+
+  <h3>Parser</h3>
+  <p>
+    The parser is the part that does the most quiet work. It accepts the messy reality of real project exports: case-insensitive header detection, flexible column naming (<code>Start Date</code>, <code>Timeline Start</code>, <code>Begin</code> all map to the same field), section headers as title rows, repeated timeline headers under each section, and a positional fallback when no headers are recognised at all. Dates are parsed through <code>python-dateutil</code> so a value like <code>3/2/2025</code> and <code>02-Mar-2025</code> both land in the same place. The principle is that the tool reads whatever a PM saved, not whatever a tool expects.
+  </p>
+
+  <h3>Generator</h3>
+  <p>
+    Tasks are grouped by phase and laid out across a calendar grid built with <strong>openpyxl</strong>. Each phase carries a configured color, applied as a <code>PatternFill</code> on the cells that span its dates, with text color chosen automatically against the background luminance so labels stay readable. Holidays and blackouts are rendered as dark columns running the full height of the chart so they read at a glance. The same data is then handed to <strong>ReportLab</strong> to produce a PDF version, sized and styled for client share.
+  </p>
+
+  <h3>Excel and PDF, both</h3>
+  <p>
+    Producing both formats was a deliberate decision. The Excel is the working artifact: a PM can adjust a date, fix a typo, hide a column, then re-export to PDF themselves. The PDF is the finished one: locked layout, consistent styling, what actually goes to the client. Either is one download away. Building only the PDF would have created a new manual step every time the plan changed by a day.
+  </p>
+
+  <h3>Config-as-code</h3>
+  <p>
+    Phase categories, the color palette, and the holiday calendar all live in a Python config file (with a JSON override for environment-specific tweaks). Changing a phase color, adding a new category, or marking a quiet-period across the team is a config edit, not a code change. The config reloads on the next report, so a tweak today shows up in the next download with no restart.
+  </p>
+
+  <h2>Key decisions</h2>
+
+  <h3>Web app, not a CLI</h3>
+  <p>
+    A CLI would have been faster to build but slower to adopt. Project managers don't run Python scripts; they upload files. A small Flask app with a drag-and-drop upload and two download buttons puts the tool in the hands of every PM, not just the ones comfortable in a terminal. The discipline in internal tooling is making the right thing the easy thing.
+  </p>
+
+  <h3>Bend to the templates, not the other way around</h3>
+  <p>
+    The temptation with multi-format input is to publish a single canonical schema and reject anything that doesn't match. That works for an API. It fails for tools used by humans, where the input is whatever the human's tracker happens to export this week. Building the parser to accept the real shapes of real files (with named-column, sectioned, and positional fallbacks) made the tool useful on day one rather than after a template migration.
+  </p>
+
+  <h3>Microsoft auth gate, optional</h3>
+  <p>
+    In production the app sits behind Microsoft Entra (Azure AD) SSO so only the team can reach it. Auth is toggled by an environment variable, so the same code runs unauthenticated in local dev and gated in production. One codebase, one deploy story, two modes.
+  </p>
+
+  <h3>Tests for the parser, not the UI</h3>
+  <p>
+    The parser is the part most likely to break on a new template, so it has the heaviest test coverage: unit tests for column detection, integration tests against real anonymised exports, end-to-end tests through the full upload-to-download path. The UI is intentionally thin, which keeps the test pyramid sane.
+  </p>
+
+  <h2>Outcomes</h2>
+
+  <div class="outcome-grid">
+    <div><strong>Hours → minutes</strong><span>To produce a waterfall report</span></div>
+    <div><strong>Team-wide</strong><span>Adopted across project management</span></div>
+    <div><strong>Two formats</strong><span>Editable Excel + client-ready PDF, one upload</span></div>
+  </div>
+
+  <p>
+    The outcome that matters most is the hardest one to put a number on: reports stay consistent. Every PM produces the same kind of waterfall in the same colors with the same holiday markers, because the tool does the formatting. The "is this on-brand?" tax that every hand-built report carries is simply gone.
+  </p>
+
+  <h2>What I'd do differently</h2>
+
+  <p>
+    I'd build a small templates layer sooner. Today a PM picks phase colors and holidays from the global config, which is fine for the common case but means every project that diverges from the default has to ride on the default. A per-project template that captures the phase palette and any project-specific dates would let a PM save their setup once and reuse it.
+  </p>
+
+  <p>
+    I'd also add report history. Right now generated reports are written to a temporary folder and cleared on a schedule. A persistent per-user history (with a "regenerate from the same inputs" button) would turn the tool from a one-shot generator into a small archive of every status report the team has ever produced.
+  </p>
+
+</CaseStudy>
+
+<style>
+  .overview {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+  }
+
+  .overview-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    width: 100%;
+  }
+
+  .overview-tier {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .overview-arrow {
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    color: var(--teal);
+    line-height: 1;
+  }
+
+  @media (max-width: 600px) {
+    .overview-tier {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+  }
+</style>

@@ -1,0 +1,67 @@
+---
+import SectionHead from './SectionHead.astro';
+import WorkCard from './WorkCard.astro';
+
+const workItems = [
+  {
+    tag: 'Internal',
+    title: 'Production Pipeline',
+    description:
+      'Internal tooling the team ships on every day. Three sub-pipelines for the three deliverable types: Gulp + MJML for emails, Gulp + Mustache for banners, Gulp + Mustache + SASS for static sites.',
+    stack: 'Gulp · MJML · Mustache · SASS · Node',
+    slug: 'production-pipeline',
+  },
+  {
+    tag: 'Internal',
+    title: 'Site-Watch Tool',
+    description:
+      'Daily competitor monitoring across grouped site lists. Snapshots text, diffs against the archive, captures a screenshot only when something changed, and emails per-group digests with a link to the full HTML report.',
+    stack: 'Python · Playwright · BeautifulSoup · diff-match-patch',
+    slug: 'site-watch',
+  },
+  {
+    tag: 'Internal',
+    title: 'Timeline Generator',
+    description:
+      'Internal web app that turns flat Excel project exports into color-coded waterfall reports. Output as both an editable Excel for the PM and a polished PDF for the client. Eliminated hours of weekly manual formatting.',
+    stack: 'Flask · openpyxl · ReportLab · Tailwind',
+    slug: 'timeline-generator',
+  },
+  {
+    tag: 'Infrastructure',
+    title: 'AWS Topology',
+    description:
+      'The AWS topology hosting twenty-plus brand sites. Each brand gets isolated staging, UAT, and production environments with one identical deploy and rollback flow built directly against the AWS API.',
+    stack: 'Gatsby · Route 53 · CloudFront · S3 · Lambda@Edge',
+    slug: 'aws-topology',
+  },
+];
+---
+
+<section id="work">
+  <SectionHead title="Internal Tools" />
+
+  <div class="work-grid">
+    {workItems.map((item) => <WorkCard {...item} />)}
+  </div>
+</section>
+
+<style>
+  section {
+    padding: var(--section-pad) 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .work-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+
+  @media (max-width: 900px) {
+    .work-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

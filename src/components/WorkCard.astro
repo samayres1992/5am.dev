@@ -1,0 +1,244 @@
+---
+export interface Props {
+  tag: string;
+  title: string;
+  description: string;
+  stack?: string;
+  slug?: string;
+  links?: string[];
+  href?: string;
+  note?: string;
+}
+
+const { tag, title, description, stack, slug, links, href: hrefProp, note } = Astro.props;
+const href = hrefProp ?? (slug ? `/work/${slug}` : undefined);
+const Tag = href ? 'a' : 'div';
+---
+
+<Tag class="work-card" {...(href ? { href } : {})}>
+  <div class="work-tag">{tag}</div>
+  <div class="work-h">{title}</div>
+  <div class="work-text">{description}</div>
+  {links && links.length > 0 && (
+    <div class="work-links">
+      {links.map((domain) => (
+        <a href={`https://${domain}`} target="_blank" rel="noopener noreferrer">
+          {domain} <span aria-hidden="true">↗</span>
+        </a>
+      ))}
+    </div>
+  )}
+  {stack && (
+    <div class="work-stack"><span>Stack:</span> {stack}</div>
+  )}
+  {note && (
+    <div class="work-note">
+      <svg class="work-note-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none">
+        <path d="M5 11h14v9H5z M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      <span>{note}</span>
+    </div>
+  )}
+  {href && (
+    <span class="work-arrow" aria-hidden="true">
+      <svg class="ring" viewBox="0 0 44 44" fill="none">
+        <circle class="ring-track" cx="22" cy="22" r="21" />
+        <circle class="ring-progress" cx="22" cy="22" r="21" />
+      </svg>
+      <svg class="glyph" viewBox="0 0 24 24" fill="none">
+        <path d="M3.5 12 H20.5 M13.5 5 L20.5 12 L13.5 19" />
+      </svg>
+    </span>
+  )}
+</Tag>
+
+<style>
+  .work-card {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    padding: 2.25rem;
+    border-radius: 0.25rem;
+    transition: border-color 0.4s ease, transform 0.4s ease, box-shadow 0.4s ease;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .work-card.is-active {
+    border-color: var(--teal);
+    box-shadow:
+      0 0 0 1px rgba(95, 200, 200, 0.15),
+      0 0.5rem 2rem rgba(95, 200, 200, 0.06);
+  }
+
+  .work-card:hover {
+    border-color: var(--teal);
+    transform: translateY(-0.125rem);
+  }
+
+  .work-tag {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 1rem;
+  }
+
+  .work-h {
+    font-family: var(--font-display);
+    font-size: 2.25rem;
+    line-height: 1.05;
+    font-weight: 400;
+    margin-bottom: 0.75rem;
+  }
+
+  .work-text {
+    color: var(--ink-soft);
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    flex: 1;
+  }
+
+  .work-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .work-links a {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--ink);
+    text-decoration: none;
+    padding: 0.4375rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 6.25rem;
+    line-height: 1;
+    transition: border-color 0.2s, color 0.2s, background-color 0.2s;
+  }
+
+  .work-links a span {
+    color: var(--teal);
+  }
+
+  .work-links a:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+    background: var(--bg);
+  }
+
+  .work-stack {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--ink);
+    letter-spacing: 0.03em;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+    margin-top: auto;
+  }
+
+  .work-stack span {
+    color: var(--ink-soft);
+  }
+
+  /* Note — small footer line for access/availability info (e.g. password-gated pages) */
+  .work-note {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.03em;
+    color: var(--teal);
+    padding-top: 1rem;
+    margin-top: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    line-height: 1.4;
+  }
+
+  /* If both stack and note are present, note sits below stack without its own top push */
+  .work-stack + .work-note {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+  }
+
+  .work-note-icon {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+  }
+
+  /* Arrow — shown on cards that link to a case study page */
+  .work-arrow {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background-color: transparent;
+    transition: background-color 0.3s ease;
+  }
+
+  .work-arrow .ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .work-arrow .ring-track {
+    stroke: var(--line);
+    stroke-width: 2;
+  }
+
+  /* The drawn outline — hidden by default via a full dash offset */
+  .work-arrow .ring-progress {
+    stroke: var(--teal);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-dasharray: 132;
+    stroke-dashoffset: 132;
+    transition: stroke-dashoffset 0.3s ease;
+  }
+
+  .work-arrow .glyph {
+    position: relative;
+    width: 1.5rem;
+    height: 1.5rem;
+    stroke: var(--ink);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* Hover: draw the outline over 1.5s, then darken the icon area at the end */
+  a.work-card:hover .work-arrow {
+    background-color: #000000;
+    transition: background-color 0.3s ease 1.5s;
+  }
+
+  a.work-card:hover .ring-progress {
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1.5s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .work-arrow .ring-progress,
+    a.work-card:hover .ring-progress {
+      transition-duration: 0.15s;
+    }
+    a.work-card:hover .work-arrow {
+      transition-delay: 0s;
+    }
+  }
+</style>

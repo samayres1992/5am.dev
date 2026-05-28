@@ -1,0 +1,25 @@
+---
+export interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<div class="sec-head">
+  <h2 class="sec-name">{title}</h2>
+</div>
+
+<style>
+  .sec-head {
+    margin-bottom: 3.75rem;
+  }
+
+  .sec-name {
+    font-family: var(--font-display);
+    font-size: clamp(2.25rem, 5vw, 4rem);
+    line-height: 1.05;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+</style>

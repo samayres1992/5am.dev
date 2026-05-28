@@ -1,0 +1,92 @@
+---
+export interface Props {
+  label: string;
+  sublabel?: string;
+  tier?: 'input' | 'process' | 'output' | 'accent';
+  size?: 'sm' | 'md' | 'lg';
+}
+
+const { label, sublabel, tier = 'process', size = 'md' } = Astro.props;
+---
+
+<div class:list={['node', `tier-${tier}`, `size-${size}`]}>
+  <div class="node-label">{label}</div>
+  {sublabel && <div class="node-sublabel">{sublabel}</div>}
+</div>
+
+<style>
+  .node {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 0.25rem;
+    padding: 1rem 1.125rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    transition: border-color 0.2s;
+    position: relative;
+    text-align: center;
+    min-width: 7.5rem;
+  }
+
+  .node-label {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--ink);
+    letter-spacing: 0.02em;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  .node-sublabel {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.05em;
+    line-height: 1.3;
+  }
+
+  .tier-input {
+    border-color: rgba(95, 200, 200, 0.4);
+    background: rgba(95, 200, 200, 0.04);
+  }
+
+  .tier-input .node-label {
+    color: var(--teal);
+  }
+
+  .tier-accent {
+    border-color: var(--teal);
+    background: rgba(95, 200, 200, 0.08);
+    box-shadow: 0 0 0 1px rgba(95, 200, 200, 0.15);
+  }
+
+  .tier-accent .node-label {
+    color: var(--teal);
+  }
+
+  .tier-output {
+    border-color: rgba(232, 165, 92, 0.4);
+    background: rgba(232, 165, 92, 0.04);
+  }
+
+  .tier-output .node-label {
+    color: #e8a55c;
+  }
+
+  .size-sm {
+    padding: 0.625rem 0.875rem;
+    min-width: 5.625rem;
+  }
+  .size-sm .node-label {
+    font-size: 0.6875rem;
+  }
+
+  .size-lg {
+    padding: 1.25rem 1.5rem;
+    min-width: 11.25rem;
+  }
+  .size-lg .node-label {
+    font-size: 0.875rem;
+  }
+</style>

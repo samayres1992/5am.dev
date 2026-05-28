@@ -1,0 +1,213 @@
+---
+import CaseStudy from '../../layouts/CaseStudy.astro';
+import Diagram from '../../components/Diagram.astro';
+import DiagramNode from '../../components/DiagramNode.astro';
+---
+
+<CaseStudy
+  title="AWS Topology"
+  tag="Infrastructure"
+  role="Director of Technology"
+  timeframe="2022 – Present"
+  stack="Gatsby · AWS API · CloudFront · S3 · Lambda · Route 53"
+  oneliner="The AWS infrastructure that hosts every brand site we ship, multiple Gatsby static builds across staging, UAT, and production, with consistent deploy and rollback flows for every brand."
+>
+
+  <p class="lede">
+    Twenty-plus brand sites, three environments per brand, one team. The only way that works is if the infrastructure looks the same for every brand and the deploy story is identical across them. This is how that's built on AWS.
+  </p>
+
+  <h2>The problem</h2>
+
+  <p>
+    Brand work in a regulated industry has a particular shape: every site needs a staging environment for the team, a UAT environment for the client, and production behind a public domain. Each environment needs predictable URLs, repeatable deploys, and rollback that doesn't require a phone call to an engineer at midnight.
+  </p>
+
+  <p>
+    Before the current topology, environments drifted between brands. Some had staging on subdomains, some on subpaths. Some used CloudFront, some didn't. Deploys were a manual mix of S3 syncs and CloudFront invalidations. Rolling back a bad release meant either re-deploying the previous build manually or hoping the cache TTL would expire before the client noticed.
+  </p>
+
+  <p>
+    I needed a single deploy story that worked for every brand without per-project special-casing. <strong>One pattern. Twenty brands. Three environments each.</strong>
+  </p>
+
+  <h2>The architecture</h2>
+
+  <p>
+    Every brand sits behind the same AWS pattern: Route 53 for DNS, CloudFront for delivery and edge caching, S3 for storage, and Lambda@Edge for any edge logic (redirects, A/B routing, header rewrites). Gatsby builds emit a folder of static assets; deploys are S3 syncs followed by targeted CloudFront invalidations.
+  </p>
+
+  <Diagram title="Per-brand topology">
+    <div class="aws-flow">
+      <div class="aws-stage-wrap">
+        <div class="aws-stage-label">Build</div>
+        <div class="aws-stage">
+          <DiagramNode label="Gatsby build" sublabel="CI artifact" tier="input" size="lg" />
+        </div>
+      </div>
+
+      <div class="aws-arrow aws-arrow-down" aria-hidden="true">↓</div>
+
+      <div class="aws-stage-wrap">
+        <div class="aws-stage-label">Deploy</div>
+        <div class="aws-stage">
+          <DiagramNode label="S3 sync + CF invalidate" sublabel="aws-cli, per environment" tier="process" size="lg" />
+        </div>
+      </div>
+
+      <div class="aws-arrow aws-arrow-down" aria-hidden="true">↓</div>
+
+      <div class="aws-stage-wrap">
+        <div class="aws-stage-label">Environments</div>
+        <div class="aws-stage aws-stage-envs">
+          <DiagramNode label="staging.brand.com" sublabel="Internal review" tier="accent" />
+          <DiagramNode label="uat.brand.com" sublabel="Client review" tier="accent" />
+          <DiagramNode label="brand.com" sublabel="Production" tier="accent" />
+        </div>
+      </div>
+
+      <div class="aws-arrow aws-arrow-down" aria-hidden="true">↓</div>
+
+      <div class="aws-stage-wrap">
+        <div class="aws-stage-label">AWS ecosystem</div>
+        <div class="aws-stage aws-stage-services">
+          <DiagramNode label="Route 53" tier="process" size="sm" />
+          <DiagramNode label="CloudFront" tier="process" size="sm" />
+          <DiagramNode label="S3" tier="process" size="sm" />
+          <DiagramNode label="Lambda@Edge" tier="process" size="sm" />
+        </div>
+      </div>
+    </div>
+  </Diagram>
+
+  <h3>Environments</h3>
+  <p>
+    Each brand has three environments mapped to three subdomain conventions: <code>staging.brand.com</code> for engineering, <code>uat.brand.com</code> for client review, and <code>brand.com</code> for production. Each environment is its own S3 bucket fronted by its own CloudFront distribution. They share zero state. Promoting a build is just deploying the same artifact to the next environment's bucket.
+  </p>
+
+  <h3>Deploys</h3>
+  <p>
+    A deploy is an <code>aws s3 sync</code> of the build artifact into the target environment's bucket followed by a targeted CloudFront invalidation. No active-version flag to flip, no symlink dance, no in-place rewrites. CloudFront serves cached content during the upload, then returns the new content on the next request after invalidation, so there's no maintenance window and no half-mixed state visible to a viewer.
+  </p>
+
+  <h3>Rollback</h3>
+  <p>
+    Rollback is the same flow run against an older build. Build artifacts are kept in CI, indexed by commit, so "roll back to last Tuesday's release" is the same sync + invalidate against the previous artifact. The rollback path is the deploy path. That symmetry is the single most important property of the system: any engineer who has done a deploy has already done a rollback.
+  </p>
+
+  <h2>Key decisions</h2>
+
+  <h3>Static over server-rendered</h3>
+  <p>
+    Brand sites don't need request-time logic. Content updates happen on a schedule, not per-visitor. Gatsby builds emit static HTML that CloudFront caches for free at the edge. The result is sites that survive traffic spikes without scaling, cost almost nothing to run, and have a tiny security surface area.
+  </p>
+
+  <h3>One pattern, every brand</h3>
+  <p>
+    The temptation with per-brand work is to optimise each one. I chose the opposite: every brand gets the same topology even if a particular brand could technically use less. The cost is some over-provisioning. The benefit is that any engineer can deploy any brand without project-specific knowledge, and a new brand goes from zero to three environments in hours, not days.
+  </p>
+
+  <h3>AWS API over a hosted CI deploy plugin</h3>
+  <p>
+    Plenty of CI tools have one-click S3+CloudFront integrations. I built the deploy logic directly against the AWS API because the team needed visibility into what was happening at each step (which S3 prefix, which invalidation, which distribution) and the canned integrations hide that. When something goes wrong in production, the team can read the logs.
+  </p>
+
+  <h2>Outcomes</h2>
+
+  <div class="outcome-grid">
+    <div><strong>16M+</strong><span>Monthly requests served</span></div>
+    <div><strong>3 envs</strong><span>Per brand, identically</span></div>
+    <div><strong>&lt; 1 min</strong><span>Deploy + rollback</span></div>
+  </div>
+
+  <p>
+    The topology has been quietly running for years. New brands onboard onto the same pattern, the same deploy story works for every site, and rollback is genuinely boring. The best infrastructure is the kind that doesn't ask for attention. This asks for very little.
+  </p>
+
+  <h2>What I'd do differently</h2>
+
+  <p>
+    The deploy logic should be Terraformed or CDK-managed end-to-end. Right now the per-brand AWS resources were created over time, some via console, some via API. Bringing them all under infrastructure-as-code would make new-brand onboarding faster and disaster recovery easier. This is a known debt; the work to clean it up has been deferred because the system runs reliably.
+  </p>
+
+  <p>
+    I'd also add automated visual regression to the deploy flow. A bad build can technically deploy clean (no errors) but render wrong in production. A screenshot-diff step between staging and the proposed prod artifact would catch the small class of bugs that pass code review but fail the human eye.
+  </p>
+
+</CaseStudy>
+
+<style>
+  .aws-flow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.9rem;
+    width: 100%;
+  }
+
+  .aws-stage-wrap {
+    width: 100%;
+  }
+
+  .aws-stage-label {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 0.5rem;
+    text-align: center;
+  }
+
+  .aws-stage {
+    display: grid;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+  }
+
+  .aws-stage-source {
+    grid-template-columns: 1fr auto 1fr;
+  }
+
+  .aws-stage-envs {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .aws-stage-services {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .aws-arrow {
+    font-family: var(--font-mono);
+    color: var(--teal);
+    font-size: 1.05rem;
+    line-height: 1;
+    justify-self: center;
+  }
+
+  .aws-arrow-down {
+    margin: 0.15rem 0;
+  }
+
+  @media (max-width: 720px) {
+    .aws-stage {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+    }
+
+    .aws-arrow-inline::before {
+      content: "↓";
+    }
+
+    .aws-arrow-inline {
+      font-size: 0;
+      line-height: 0;
+    }
+
+    .aws-arrow-inline::before {
+      font-size: 1.05rem;
+      line-height: 1;
+    }
+  }
+</style>

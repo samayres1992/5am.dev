@@ -1,0 +1,51 @@
+---
+import SectionHead from './SectionHead.astro';
+import WorkCard from './WorkCard.astro';
+
+const websiteItems = [
+  {
+    tag: 'Private',
+    title: 'Client Work',
+    description:
+      'In-depth detail on commercial brand engagements from a decade of agency work in regulated healthcare. Kept off public search to protect client relationships.',
+    href: '/clients',
+    note: 'Password protected. Please email me to request access.',
+  },
+  {
+    tag: 'Personal',
+    title: 'locc.it',
+    description:
+      'A one-time secret sharing tool. The sender encrypts in the browser with a generated passcode, the server stores only the ciphertext on a deadline, and the recipient opens the link exactly once before it is deleted.',
+    stack: 'React · Express · MongoDB · CryptoJS',
+    slug: 'locc-it',
+  },
+];
+---
+
+<section id="websites">
+  <SectionHead title="Selected Work" />
+
+  <div class="work-grid">
+    {websiteItems.map((item) => <WorkCard {...item} />)}
+  </div>
+</section>
+
+<style>
+  section {
+    padding: var(--section-pad) 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .work-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    align-items: stretch;
+  }
+
+  @media (max-width: 900px) {
+    .work-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

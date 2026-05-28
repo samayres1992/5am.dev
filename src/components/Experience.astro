@@ -1,0 +1,170 @@
+---
+import SectionHead from './SectionHead.astro';
+
+const roles = [
+  {
+    years: '2021 – Present',
+    company: 'CultHealth',
+    location: 'New York, NY',
+    role: 'Director of Technology',
+    note: 'Hired to build the engineering function from zero. Now run the team that handles all digital web projects for the company. Five engineers (3 senior, 1 mid, 1 junior), with 2 direct reports.',
+  },
+  {
+    years: '2020 – 2021',
+    company: 'Heartbeat',
+    location: 'New York, NY',
+    role: 'Senior Web Developer',
+    note: 'Created React SPAs and Drupal sites for health brands. Drove migration of legacy Drupal logic into Symfony microservices and built reusable UI components.',
+  },
+  {
+    years: '2016 – 2020',
+    company: 'Circle Interactive',
+    location: 'Bristol, UK',
+    role: 'Web Developer',
+    note: 'Full-stack development with React, REST APIs, and CiviCRM. Managed CI/CD pipelines and mentored junior developers.',
+  },
+  {
+    years: '2014 – 2016',
+    company: 'Cap2 Solutions',
+    location: 'Bath, UK',
+    role: 'Junior Web Developer',
+    note: 'PHP and JavaScript feature work on a sports-management platform built with Angular and Symfony.',
+  },
+  {
+    years: '2012 – 2013',
+    company: 'Nokia Siemens Networks',
+    location: 'Bristol, UK',
+    role: 'Junior Software Engineer (industrial placement)',
+    note: 'Environment testing for an internal project-management tool, with Node.js and Watir.',
+  },
+];
+---
+
+<section id="experience">
+  <SectionHead title="Experience" />
+
+  <div class="xp-list">
+    {
+      roles.map((r) => (
+        <div class="xp-row">
+          <div class="xp-when">{r.years}</div>
+          <div class="xp-body">
+            <div class="xp-head">
+              <span class="xp-co">{r.company}</span>
+              <span class="xp-loc">{r.location}</span>
+            </div>
+            <div class="xp-role">{r.role}</div>
+            <p class="xp-note">{r.note}</p>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+
+  <p class="xp-edu">
+    <span>Education</span>
+    Bachelor's in Web Design, University of the West of England, 2011–2014.
+    Industrial placement at Nokia Siemens Networks 2012–2013.
+  </p>
+</section>
+
+<style>
+  section {
+    padding: var(--section-pad) 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .xp-row {
+    display: grid;
+    grid-template-columns: 9rem 1fr;
+    gap: 2rem;
+    padding: 2rem 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .xp-row:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .xp-when {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    padding-top: 0.4rem;
+  }
+
+  .xp-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .xp-co {
+    font-family: var(--font-display);
+    font-size: 1.625rem;
+    line-height: 1.1;
+    color: var(--ink);
+  }
+
+  .xp-loc {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .xp-role {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 0.75rem;
+  }
+
+  .xp-note {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    max-width: 44rem;
+  }
+
+  .xp-edu {
+    margin-top: 2.5rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    letter-spacing: 0.03em;
+    color: var(--ink-soft);
+  }
+
+  .xp-edu span {
+    color: var(--teal);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 0.6875rem;
+    margin-right: 0.75rem;
+    display: block;
+  }
+
+  @media (max-width: 600px) {
+    .xp-row {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+      padding: 1.5rem 0;
+    }
+    .xp-when {
+      padding-top: 0;
+    }
+    .xp-edu span {
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+  }
+</style>

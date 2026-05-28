@@ -1,0 +1,277 @@
+---
+import CaseStudy from '../../layouts/CaseStudy.astro';
+import Diagram from '../../components/Diagram.astro';
+import DiagramNode from '../../components/DiagramNode.astro';
+
+const links = [
+  { label: 'Live site', url: 'https://locc.it' },
+  { label: 'GitHub', url: 'https://github.com/samayres1992/locc.it' },
+];
+---
+
+<CaseStudy
+  title="locc.it"
+  tag="Personal"
+  role="Sole engineer & designer"
+  timeframe="2019 – Present"
+  stack="React · Express · MongoDB · CryptoJS"
+  oneliner="A web app for sharing one-time secrets: the sender encrypts in the browser with a generated passcode, the server stores only the ciphertext on a deadline, and a recipient with the passcode opens the link exactly once before it's deleted."
+  links={links}
+>
+
+  <p class="lede">
+    Every team shares secrets, a database password, an API key, a login for a
+    contractor. Almost nobody shares them safely. locc.it is the tool I built so
+    I wouldn't have to: paste a secret, get a link and a passcode, and know the
+    secret was encrypted before it left the browser, can be opened exactly once,
+    and will expire whether or not anyone opens it.
+  </p>
+
+  <h2>The problem</h2>
+
+  <p>
+    Watch how secrets actually move between people and it's grim. A password
+    gets pasted into a Slack DM. An API key goes out by email. A production
+    token lands in an iMessage thread because it was the fastest window open.
+    The secret reaches the right person, and then it just stays there.
+  </p>
+
+  <p>
+    Every one of those channels keeps a copy. Slack retains message history and
+    syncs it to every device on the account. Email lives in two mailboxes and
+    two sets of backups. Nothing expires. A credential shared once in 2019 is
+    still sitting in a searchable archive today, long after anyone remembers
+    it's there. The leak isn't the moment of sharing, it's the indefinite
+    retention afterward.
+  </p>
+
+  <p>
+    I wanted a tool with three properties: <strong>encryption in the
+    browser</strong> (a secret is ciphertext before it leaves the sender's
+    machine), <strong>one-time access</strong> (a link opens once, then the
+    secret is gone), and <strong>a required expiry</strong> (every secret has
+    a deadline, there is no option to create one that lasts forever).
+  </p>
+
+  <h2>The architecture</h2>
+
+  <p>
+    locc.it is a React frontend and an Express + MongoDB backend. The shape of
+    the security model matters more than the stack: the browser handles the
+    encryption, the server handles storage and the decrypt step, and nothing
+    sensitive is persisted on the server beyond a short, bounded window.
+  </p>
+
+  <Diagram title="Life of a secret">
+    <div class="overview">
+      <div class="overview-col">
+        <div class="overview-tier">
+          <DiagramNode label="Sender's browser" sublabel="generates passcode" tier="input" />
+          <DiagramNode label="AES encrypt" sublabel="CryptoJS, in-browser" tier="input" />
+          <DiagramNode label="POST /api/encrypt" sublabel="ciphertext + expiry" tier="input" />
+        </div>
+        <div class="overview-arrow">↓</div>
+        <div class="overview-tier">
+          <DiagramNode label="MongoDB" sublabel="ciphertext + URL + expiry" tier="accent" size="lg" />
+          <DiagramNode label="POST /api/decrypt" sublabel="passcode submitted" tier="accent" size="lg" />
+          <DiagramNode label="Server decrypts" sublabel="in-memory, then deletes" tier="accent" size="lg" />
+        </div>
+        <div class="overview-arrow">↓</div>
+        <div class="overview-tier">
+          <DiagramNode label="Plaintext returned" sublabel="HTTPS response" tier="output" />
+          <DiagramNode label="Record purged" sublabel="single-use" tier="output" />
+          <DiagramNode label="Link is dead" sublabel="refresh finds nothing" tier="output" />
+        </div>
+      </div>
+    </div>
+  </Diagram>
+
+  <h3>Encryption in the browser</h3>
+  <p>
+    When a sender submits a secret, the browser generates a random passcode and
+    runs <strong>CryptoJS AES</strong> over the payload before anything is
+    transmitted. Only the ciphertext (and the URL identifier, and the chosen
+    expiry) are sent to the server. The passcode never touches the server at
+    write time; the sender shares it with the recipient out-of-band, alongside
+    the link.
+  </p>
+
+  <h3>What the server actually does</h3>
+  <p>
+    The server's standing ability to read anything is zero. There is no master
+    key, no per-user key, no recovery flow. The ciphertext sits in MongoDB
+    alongside the URL identifier and the expiry, and that's it. When a
+    recipient submits the passcode, the server uses it once to run the AES
+    decrypt in memory, returns the plaintext to the recipient over HTTPS, and
+    immediately deletes the record. The passcode is never persisted; the
+    plaintext exists for the duration of the request and never afterward.
+  </p>
+  <p>
+    This is the security trade-off worth being clear about: the server is
+    <em>trusted to perform decryption on request</em>, even though it has no
+    standing ability to read what it stores. Moving the decrypt step into the
+    recipient's browser (so the passcode never reaches the server at all) is
+    the most important future change. More on that below.
+  </p>
+
+  <h3>One-time access, mandatory expiry</h3>
+  <p>
+    A locc.it link works exactly once. The first successful open returns the
+    secret and destroys it; a refresh or a second click finds nothing. Every
+    secret also carries an expiry, and it isn't optional: a link that's
+    created and never opened doesn't linger, because once its deadline passes
+    a cleanup job purges the record whether it was viewed or not. Between
+    single use and required expiry, every secret has a short, guaranteed
+    lifetime instead of an open-ended one. A locc.it link is only ever live,
+    used, or expired.
+  </p>
+
+  <h3>Brute-force protection and bot defence</h3>
+  <p>
+    Three failed passcode attempts lock a record for an hour. The decrypt and
+    encrypt routes are individually rate-limited (5 and 10 requests per minute
+    respectively) to slow scraping. Forms run behind Google reCAPTCHA, and a
+    cron job sweeps expired records on a schedule. None of these are exotic,
+    but together they close the obvious back doors around the cryptography
+    rather than relying on the encryption to do all the work.
+  </p>
+
+  <h3>Accounts are optional</h3>
+  <p>
+    A first-time sender can use the tool without signing up. OAuth via Google,
+    GitHub, or Facebook is there for people who want a small dashboard of
+    secrets they've sent, but it's never required to share or receive one. The
+    default path is anonymous on purpose: the higher the bar to send a secret
+    safely, the more people just paste it into Slack.
+  </p>
+
+  <h2>Key decisions</h2>
+
+  <h3>Encrypt on the client, store ciphertext only</h3>
+  <p>
+    The simplest way to build a secret-sharing tool is to encrypt on the
+    server with a key the server holds. It's easy to build and it means a
+    database dump is a secrets dump. Doing the encryption in the browser, with
+    a passcode that's never written down on the server, makes the stored data
+    inert by itself. A copy of the database alone is just a pile of locked
+    boxes; the keys aren't anywhere on disk.
+  </p>
+
+  <h3>Expiry is mandatory, not a setting</h3>
+  <p>
+    Most sharing tools make expiry optional and default it generously. locc.it
+    makes it required and bounded. The cost is that a sender can't create a
+    permanent link, even if they want one. The gain is that there is no such
+    thing as a forgotten locc.it secret: the failure mode where a credential
+    quietly outlives its purpose can't happen, because the default behaviour
+    is the safe behaviour and there's no way to opt out of it.
+  </p>
+
+  <h3>A web app, not a developer tool</h3>
+  <p>
+    locc.it could have been a CLI or a library, cleaner to build, and a
+    natural fit for the engineers most fluent in why it matters. I made it a
+    plain web page instead: paste a secret, get a link. The people who most
+    need to share credentials safely aren't all developers, and a tool only
+    improves security if the least technical person in the exchange will
+    actually use it.
+  </p>
+
+  <h2>Outcomes</h2>
+
+  <div class="outcome-grid">
+    <div>
+      <strong>Zero</strong>
+      <span>Passcodes or plaintext persisted on the server</span>
+    </div>
+    <div>
+      <strong>One view</strong>
+      <span>Then the record is deleted</span>
+    </div>
+    <div>
+      <strong>Required</strong>
+      <span>Every secret carries an expiry</span>
+    </div>
+    <div>
+      <strong>Since 2019</strong>
+      <span>Live and in use for over six years</span>
+    </div>
+  </div>
+
+  <p>
+    locc.it has been live since 2019 and still runs today, years of quiet
+    uptime for something that has never asked for much attention. It does one
+    thing: move a secret from one person to another without leaving a copy
+    behind. It's still the link I send whenever someone needs a credential
+    from me, and building it was the cleanest way I know to think hard about
+    a real threat model end to end: what the server holds, what survives a
+    view, and for how long.
+  </p>
+
+  <h2>What I'd do differently</h2>
+
+  <p>
+    The biggest improvement I'd ship is moving the decrypt step into the
+    recipient's browser. Today the passcode is submitted to the server, used
+    once, and discarded; the cryptography is correct but the server is a trust
+    boundary that doesn't need to exist. A version where the recipient's
+    browser fetches the ciphertext, decrypts it locally with the passcode the
+    sender shared, and the server is never asked to perform the AES step,
+    would shrink the trusted-server window to zero. This is the change that
+    moves locc.it from "the server has no standing ability to read" to "the
+    server cannot read."
+  </p>
+
+  <p>
+    Alongside that, I'd document the security model openly: publish exactly
+    how a secret is protected end-to-end, so the model is something a visitor
+    can verify rather than take on faith. For a tool whose entire pitch is
+    trust, "it's encrypted" should be a claim anyone can check, not one they
+    have to believe.
+  </p>
+
+  <p>
+    Six years in, the surrounding app has accumulated features around the
+    edges of its one real job. A tool this focused is usually strongest
+    stripped back to exactly what it does, and deciding what still earns its
+    place is overdue.
+  </p>
+
+</CaseStudy>
+
+<style>
+  .overview {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+  }
+
+  .overview-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    width: 100%;
+  }
+
+  .overview-tier {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .overview-arrow {
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    color: var(--teal);
+    line-height: 1;
+  }
+
+  @media (max-width: 600px) {
+    .overview-tier {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+  }
+</style>

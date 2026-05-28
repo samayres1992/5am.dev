@@ -1,0 +1,159 @@
+---
+import CaseStudy from '../../layouts/CaseStudy.astro';
+import Diagram from '../../components/Diagram.astro';
+import DiagramNode from '../../components/DiagramNode.astro';
+---
+
+<CaseStudy
+  title="Site-Watch"
+  tag="Internal"
+  role="Director of Technology"
+  timeframe="2025"
+  stack="Python · Playwright · BeautifulSoup · diff-match-patch · PyMuPDF"
+  oneliner="A daily competitor-monitoring service that watches grouped sets of brand and competitor sites, captures the changes that matter, and emails per-group digests with a one-click link to the full diff report."
+>
+
+  <p class="lede">
+    Health brand strategy depends on knowing what competitors are doing: pricing pages, indication updates, new patient resources, formulary changes. The strategy team was checking sites by hand, which meant they checked rarely and inconsistently. I built a Python service that does it every day, automatically, and emails the right people when something has actually changed.
+  </p>
+
+  <h2>The problem</h2>
+
+  <p>
+    Strategy work is competitive intelligence work. The team needed to know when an indication was added to a competitor's product page, when a new copay assistance program launched, when a label update went live. These changes drive client recommendations and pitch updates.
+  </p>
+
+  <p>
+    The existing process was a spreadsheet of URLs and a recurring calendar event. Sites were checked sporadically, often well after a change went live. Small updates were missed entirely. There was no diff capability, so reviewers had to remember what a page looked like last time, which they couldn't.
+  </p>
+
+  <p>
+    The brief I gave myself was simple: <strong>check every site every day, store snapshots, surface meaningful diffs to the people who can act on them</strong>. Engineering should run it. The brand teams should consume it.
+  </p>
+
+  <h2>The architecture</h2>
+
+  <p>
+    Site-Watch is a Python scheduler that walks each site in a <code>config.json</code>, captures every page as plain text, compares against the most recent archived snapshot, and only does the expensive work (screenshots, visual diffs, report generation, email) when something has actually changed. The output is a self-contained HTML report per host, hosted on a public server via SFTP, with an emailed summary linking to it. Sites are grouped by audience, and each group has its own recipient list, so the right team gets the right alerts.
+  </p>
+
+  <Diagram title="Daily run">
+    <div class="overview">
+      <div class="overview-col">
+        <div class="overview-tier">
+          <DiagramNode label="config.json" sublabel="sites + emails" tier="input" />
+          <DiagramNode label="Schedule" sublabel="daily" tier="input" />
+          <DiagramNode label="Archive" sublabel="prior snapshots" tier="input" />
+        </div>
+        <div class="overview-arrow">↓</div>
+        <div class="overview-tier">
+          <DiagramNode label="Capture" sublabel="Playwright · BeautifulSoup" tier="accent" size="lg" />
+          <DiagramNode label="Text diff" sublabel="diff-match-patch" tier="accent" size="lg" />
+          <DiagramNode label="Visual diff" sublabel="PIL · NumPy" tier="accent" size="lg" />
+        </div>
+        <div class="overview-arrow">↓</div>
+        <div class="overview-tier">
+          <DiagramNode label="HTML report" sublabel="per host" tier="output" />
+          <DiagramNode label="SFTP upload" sublabel="paramiko" tier="output" />
+          <DiagramNode label="Email digest" sublabel="yagmail" tier="output" />
+        </div>
+      </div>
+    </div>
+  </Diagram>
+
+  <h3>Capture</h3>
+  <p>
+    For each URL the crawler follows internal links from a starting site, with an <code>exclude_pages</code> pattern list to skip irrelevant routes. <strong>requests</strong> fetches the page and <strong>BeautifulSoup</strong> extracts the plain text, stripping scripts, styles, and markup naturally as a side effect of <code>get_text()</code>. PDFs are handled the same way through <strong>PyMuPDF</strong>, which extracts text from each page. Snapshots land in <code>archive/&lt;host&gt;/&lt;date&gt;/&lt;timestamp&gt;/&lt;page-slug&gt;.txt</code>, so the snapshot store is just the filesystem, organised by host and run.
+  </p>
+
+  <h3>Diff</h3>
+  <p>
+    Plain text gets compared with <strong>diff-match-patch</strong>, which produces patches between the old and new snapshot. The diff is rendered into the HTML report with <code>&lt;ins&gt;</code> and <code>&lt;del&gt;</code> highlighting on the changed words. The semantic-cleanup pass collapses a one-word edit into a one-word highlight rather than reporting an entire paragraph as a delete + insert.
+  </p>
+
+  <h3>Screenshots and visual diff</h3>
+  <p>
+    When the text diff is non-empty, <strong>Playwright</strong> opens a headless Chromium against the page and grabs a full-page screenshot. <strong>Pillow + NumPy</strong> then generate a three-panel image (old, new, and a red-highlighted overlay of the changed pixels) so a reviewer can spot the change visually in seconds. This only runs on pages that actually changed, which is the difference between a fast daily run and an expensive one.
+  </p>
+
+  <h3>Report and delivery</h3>
+  <p>
+    For each host with changes, the run generates an <code>index.html</code> with a side-by-side text diff per page and a "Compare Screenshots" modal showing the visual diff. Style and script assets are bundled in so the report works as a standalone artifact. The bundle is uploaded over SFTP to a public web server (paramiko), and yagmail sends a per-group email with the site name, change count, a "View report" button linking to the public URL, and the list of changed pages.
+  </p>
+
+  <h2>Key decisions</h2>
+
+  <h3>Snapshot text, not HTML</h3>
+  <p>
+    Comparing raw HTML would surface every cache-buster, every analytics nonce, every dynamic ID as a change. BeautifulSoup's text extraction removes all of that as a side effect, so the diff is signal: copy changes, indication updates, new sections. The signal-to-noise is dramatically better than a byte-level diff and there's no custom strip-rule list to maintain.
+  </p>
+
+  <h3>Screenshot only on change</h3>
+  <p>
+    Capturing every page every day through Playwright across hundreds of URLs is expensive in time and CPU. Snapshotting text is cheap. Only triggering the headless browser when the text diff is non-empty keeps the daily run lightweight and the report email arrives within minutes of the schedule firing.
+  </p>
+
+  <h3>Filesystem snapshots, SFTP delivery</h3>
+  <p>
+    A database for snapshot history would be over-engineered. The natural unit is "the text of page X on date Y", which is exactly what the filesystem is shaped for: one file per page per timestamp, archived under host. The reports are static HTML, so any web server can host them. SFTP is the lowest-friction delivery to whatever box is already serving the team's other reports.
+  </p>
+
+  <h3>Per-group config</h3>
+  <p>
+    <code>config.json</code> groups sites by audience (DTC competitors, HCP competitors, personal sites) and pairs each group with its own email recipient list. The DTC strategist sees DTC moves without being on the HCP firehose, and vice versa. Adding a competitor is a JSON edit, not a code change.
+  </p>
+
+  <h2>Outcomes</h2>
+
+  <p>
+    Site-Watch has become the kind of tool nobody mentions but everyone uses. It catches competitor moves the team would otherwise miss and surfaces them as a daily email with a one-click link to the full diff. Because the expensive work only fires on real changes, the run cost is essentially nothing.
+  </p>
+
+  <h2>What I'd do differently</h2>
+
+  <p>
+    I'd add a noise filter for session-bound URL parameters and dynamic IDs that survive the text strip on some sites. Today these can produce a noisy email on an otherwise quiet competitor day. A small per-host allow/deny list of tokens to normalise before diffing would collapse those into the actual signal.
+  </p>
+
+  <p>
+    I'd also build a small admin UI for the URL list. Today the config sits in the repo, so adding a new competitor means a PR. A tiny self-service page that updates <code>config.json</code> and reloads would put the team in direct control of what's tracked, without an engineer in the loop.
+  </p>
+
+</CaseStudy>
+
+<style>
+  .overview {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+  }
+
+  .overview-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    width: 100%;
+  }
+
+  .overview-tier {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .overview-arrow {
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    color: var(--teal);
+    line-height: 1;
+  }
+
+  @media (max-width: 600px) {
+    .overview-tier {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+  }
+</style>

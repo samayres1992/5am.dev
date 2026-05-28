@@ -1,0 +1,60 @@
+---
+// A code-only architecture diagram. Renders boxes in a CSS grid with optional
+// SVG connectors between them. Designed to be reused across case studies.
+//
+// Usage:
+//   <Diagram caption="Email pipeline">
+//     <DiagramNode label="Brief" tier="input" />
+//     ...
+//   </Diagram>
+//
+// For now this component just provides the framing — children control layout.
+
+export interface Props {
+  caption?: string;
+  title?: string;
+}
+
+const { caption, title } = Astro.props;
+---
+
+<figure class="diagram">
+  {title && <div class="diagram-title">{title}</div>}
+  <div class="diagram-body">
+    <slot />
+  </div>
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>
+
+<style>
+  .diagram {
+    margin: 3rem 0;
+    padding: 2.5rem 2rem;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 0.375rem;
+    position: relative;
+  }
+
+  .diagram-title {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 2rem;
+  }
+
+  .diagram-body {
+    position: relative;
+  }
+
+  figcaption {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--ink-soft);
+    margin-top: 1.5rem;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+  }
+</style>

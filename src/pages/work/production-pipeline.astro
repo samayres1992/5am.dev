@@ -1,0 +1,177 @@
+---
+import CaseStudy from '../../layouts/CaseStudy.astro';
+import Diagram from '../../components/Diagram.astro';
+import DiagramNode from '../../components/DiagramNode.astro';
+---
+
+<CaseStudy
+  title="Production Pipeline"
+  tag="Internal"
+  role="Director of Technology"
+  timeframe="2021 – Present"
+  stack="Gulp · MJML · Mustache · SASS · Node&nbsp;·&nbsp;AWS"
+  oneliner="The internal tooling our team ships on every day, three pipelines for three deliverable types, built to take production cycles from days to hours."
+>
+
+  <p class="lede">
+    When I joined CultHealth, every deliverable started from a blank file. Emails were hand-coded in HTML. Banner ad sets were rebuilt by hand for each size. Static landing pages were copy-pasted from previous projects. Three different types of work, three different ad-hoc processes, and no shared tooling between them. This is the story of consolidating that into a single pipeline.
+  </p>
+
+  <h2>The problem</h2>
+
+  <p>
+    Health brand work happens in tight cycles. A new campaign means a dozen emails, a banner package across six sizes, and a landing page, all due in the same week, all needing to pass the client's compliance review. When everything is hand-built, every cycle starts from zero.
+  </p>
+
+  <p>
+    Three problems stacked up. Production time was unpredictable, depending too much on who was building it and how recently they'd done one. Quality drifted between deliverables because there was no shared component layer. And every change request meant manual updates across multiple files, with the inherent risk of forgetting one.
+  </p>
+
+  <p>
+    I wanted three things from a new pipeline: <strong>consistency</strong> (the same brand should look the same everywhere), <strong>speed</strong> (production measured against a single short cycle, not stretched across weeks), and <strong>auditability</strong> (every build should be reproducible from source for compliance audits).
+  </p>
+
+  <h2>The architecture</h2>
+
+  <p>
+    I built three sub-pipelines that share a common Gulp foundation and toolchain but specialize for their output format. Each one ingests structured content, applies brand tokens, and emits the deliverable.
+  </p>
+
+  <Diagram title="System overview">
+    <div class="overview">
+      <div class="overview-col">
+        <div class="overview-tier">
+          <DiagramNode label="Site tokens" sublabel="JSON" tier="input" />
+          <DiagramNode label="Content" sublabel="YAML" tier="input" />
+          <DiagramNode label="Partials" sublabel="Shared" tier="input" />
+        </div>
+        <div class="overview-arrow-row" aria-hidden="true">
+          <div class="overview-arrow">↓</div>
+          <div class="overview-arrow">↓</div>
+          <div class="overview-arrow">↓</div>
+        </div>
+        <div class="overview-tier">
+          <DiagramNode label="Email" sublabel="Gulp · MJML" tier="accent" size="lg" />
+          <DiagramNode label="Banner" sublabel="Gulp · Mustache" tier="accent" size="lg" />
+          <DiagramNode label="Static Site" sublabel="Gulp · Mustache · SASS" tier="accent" size="lg" />
+        </div>
+        <div class="overview-arrow-row" aria-hidden="true">
+          <div class="overview-arrow">↓</div>
+          <div class="overview-arrow">↓</div>
+          <div class="overview-arrow">↓</div>
+        </div>
+        <div class="overview-tier">
+          <DiagramNode label=".html" tier="output" sublabel="Consistent on all major email clients" />
+          <DiagramNode label=".zip" sublabel="Ad bundles" tier="output" />
+          <DiagramNode label="Static build" tier="output" sublabel="Configured for environment" />
+        </div>
+      </div>
+    </div>
+  </Diagram>
+
+  <h3>Email pipeline</h3>
+
+  <p>
+    Emails are the highest-volume deliverable and the most regulated. The pipeline takes a structured content file, merges it with the brand's MJML template library, and outputs compliant HTML with inlined styles, alt text validation, and test-rendered previews across the major mail clients. Audit-ready in one command.
+  </p>
+
+  <h3>Banner pipeline</h3>
+
+  <p>
+    Banner ads have to ship as a zip per size, each containing self-contained HTML and CSS that the ad network can serve. The pipeline reads a single source template, applies size-specific variants from a Mustache layer, and emits the full ad set with one build. What used to be a multi-hour designer task is now a single build command.
+  </p>
+
+  <h3>Static site pipeline</h3>
+
+  <p>
+    For one-off landing pages, the pipeline combines Mustache for templating, SASS for tokenized brand styles, and a shared component library. Pages ship as fully static HTML with optimized assets, ready to deploy to S3 behind CloudFront via the AWS pipeline.
+  </p>
+
+  <h2>Key decisions</h2>
+
+  <h3>Gulp over Webpack</h3>
+  <p>
+    Counter-intuitive in 2021, but the team's deliverables aren't apps; they're documents. Webpack's strengths (module graphs, code splitting, hot reload) are wasted on email and banner work. Gulp's task-based model maps naturally to "given these inputs, run these transforms, emit these files." Easier to reason about and easier to extend.
+  </p>
+
+  <h3>Mustache over a JSX-style templating library</h3>
+  <p>
+    Mustache is intentionally restrictive, no logic in templates, just substitution. This matters when content can come from non-developers (writers, account managers editing YAML). It's harder to break a Mustache template than a JSX one, and the constraint forces clean separation between content and presentation.
+  </p>
+
+  <h3>Brand tokens as a shared layer</h3>
+  <p>
+    The pipelines look different but share their input layer. A brand token change (a color, a font, a logo) propagates to every deliverable on the next build. This is the single biggest reason the system reduced rework: global changes that used to ripple manually across files now propagate at the token level.
+  </p>
+
+  <h2>Outcomes</h2>
+
+  <p>
+    The pipeline now runs every day across the team, resulting in a 40%-60% reduction in development turnaround time. It's the platform new engineers learn first because it's what everything depends on. Where we used to spend cycles rebuilding the same scaffolding, we spend them on the harder work: getting compliance right, getting the brand right, shipping more for more clients.
+  </p>
+
+  <h2>What I'd do differently</h2>
+
+  <p>
+    Gulp held up better than I expected, but the next iteration would invest in stronger schema validation at the build step. The pipeline grew organically, and a clean rewrite with a schema validator on the token and content layers would catch a class of content errors we currently catch in review.
+  </p>
+
+  <p>
+    I'd also invest earlier in a visual regression layer. The automated BrowserStack regression testing the team adopted later would have caught a handful of subtle output bugs that shipped because we trusted the build was deterministic. It mostly was. Trust, but verify.
+  </p>
+
+</CaseStudy>
+
+<style>
+  .overview {
+    display: flex;
+    justify-content: center;
+    padding: 1rem 0;
+  }
+
+  .overview-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    width: 100%;
+  }
+
+  .overview-tier {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .overview-arrow-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .overview-arrow {
+    font-family: var(--font-mono);
+    font-size: 1.25rem;
+    color: var(--teal);
+    line-height: 1;
+    justify-self: center;
+  }
+
+  @media (max-width: 600px) {
+    .overview-tier {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+
+    .overview-arrow-row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    .overview-arrow-row .overview-arrow:not(:first-child) {
+      display: none;
+    }
+  }
+</style>

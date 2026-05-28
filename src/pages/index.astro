@@ -1,0 +1,57 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import Numbers from '../components/Numbers.astro';
+import Work from '../components/Work.astro';
+import Websites from '../components/Websites.astro';
+import Experience from '../components/Experience.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base>
+  <div class="beam" aria-hidden="true">
+    <div class="beam-line"></div>
+    <div class="beam-glow"></div>
+  </div>
+  <div class="top-fade" aria-hidden="true"></div>
+  <main>
+    <div class="container">
+      <Hero />
+      <Numbers />
+      <Work />
+      <Websites />
+      <Experience />
+    </div>
+    <Footer />
+  </main>
+</Base>
+
+<script>
+  // Highlight work cards as they pass through the center of the viewport.
+  // Respects reduced-motion preferences.
+  const prefersReduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (!prefersReduce && 'IntersectionObserver' in window) {
+    const cards = document.querySelectorAll('.work-card');
+
+    // Trigger when the card crosses a narrow band centered on the viewport.
+    // rootMargin shrinks the "visible area" to a 30vh-tall band in the middle.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-active');
+          } else {
+            entry.target.classList.remove('is-active');
+          }
+        });
+      },
+      {
+        rootMargin: '-35% 0px -35% 0px',
+        threshold: 0,
+      }
+    );
+
+    cards.forEach((card) => observer.observe(card));
+  }
+</script>
