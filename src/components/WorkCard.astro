@@ -7,10 +7,9 @@ export interface Props {
   slug?: string;
   links?: string[];
   href?: string;
-  note?: string;
 }
 
-const { tag, title, description, stack, slug, links, href: hrefProp, note } = Astro.props;
+const { tag, title, description, stack, slug, links, href: hrefProp } = Astro.props;
 const href = hrefProp ?? (slug ? `/work/${slug}` : undefined);
 const Tag = href ? 'a' : 'div';
 ---
@@ -30,14 +29,6 @@ const Tag = href ? 'a' : 'div';
   )}
   {stack && (
     <div class="work-stack"><span>Stack:</span> {stack}</div>
-  )}
-  {note && (
-    <div class="work-note">
-      <svg class="work-note-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none">
-        <path d="M5 11h14v9H5z M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-      <span>{note}</span>
-    </div>
   )}
   {href && (
     <span class="work-arrow" aria-hidden="true">
@@ -146,32 +137,6 @@ const Tag = href ? 'a' : 'div';
 
   .work-stack span {
     color: var(--ink-soft);
-  }
-
-  /* Note — small footer line for access/availability info (e.g. password-gated pages) */
-  .work-note {
-    font-family: var(--font-mono);
-    font-size: 0.6875rem;
-    letter-spacing: 0.03em;
-    color: var(--teal);
-    padding-top: 1rem;
-    margin-top: auto;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    line-height: 1.4;
-  }
-
-  /* If both stack and note are present, note sits below stack without its own top push */
-  .work-stack + .work-note {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-  }
-
-  .work-note-icon {
-    width: 0.875rem;
-    height: 0.875rem;
-    flex-shrink: 0;
   }
 
   /* Arrow — shown on cards that link to a case study page */

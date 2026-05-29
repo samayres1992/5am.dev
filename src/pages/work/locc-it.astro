@@ -15,7 +15,7 @@ const links = [
   role="Sole engineer & designer"
   timeframe="2019 – Present"
   stack="React · Express · MongoDB · CryptoJS"
-  oneliner="A web app for sharing one-time secrets: the sender encrypts in the browser with a generated passcode, the server stores only the ciphertext on a deadline, and a recipient with the passcode opens the link exactly once before it's deleted."
+  oneliner="A zero-knowledge one-time secret sharing tool. The sender encrypts in the browser with a generated passcode, the server stores only the ciphertext on a deadline, and the recipient decrypts in their own browser before the record is deleted. The passcode never touches the server."
   links={links}
 >
 
@@ -57,9 +57,9 @@ const links = [
 
   <p>
     locc.it is a React frontend and an Express + MongoDB backend. The shape of
-    the security model matters more than the stack: the browser handles the
-    encryption, the server handles storage and the decrypt step, and nothing
-    sensitive is persisted on the server beyond a short, bounded window.
+    the security model matters more than the stack: the browser handles both
+    encryption <em>and</em> decryption, the server only ever holds opaque
+    ciphertext, and nothing sensitive is persisted on the server, ever.
   </p>
 
   <Diagram title="Life of a secret">
@@ -73,13 +73,13 @@ const links = [
         <div class="overview-arrow">↓</div>
         <div class="overview-tier">
           <DiagramNode label="MongoDB" sublabel="ciphertext + URL + expiry" tier="accent" size="lg" />
-          <DiagramNode label="POST /api/decrypt" sublabel="passcode submitted" tier="accent" size="lg" />
-          <DiagramNode label="Server decrypts" sublabel="in-memory, then deletes" tier="accent" size="lg" />
+          <DiagramNode label="GET /api/secret/:url" sublabel="returns ciphertext, marks viewed" tier="accent" size="lg" />
+          <DiagramNode label="Recipient's browser decrypts" sublabel="CryptoJS, passcode never sent" tier="accent" size="lg" />
         </div>
         <div class="overview-arrow">↓</div>
         <div class="overview-tier">
-          <DiagramNode label="Plaintext returned" sublabel="HTTPS response" tier="output" />
-          <DiagramNode label="Record purged" sublabel="single-use" tier="output" />
+          <DiagramNode label="Plaintext rendered" sublabel="in-browser only" tier="output" />
+          <DiagramNode label="DELETE /api/secret/:url" sublabel="record purged" tier="output" />
           <DiagramNode label="Link is dead" sublabel="refresh finds nothing" tier="output" />
         </div>
       </div>
@@ -100,18 +100,21 @@ const links = [
   <p>
     The server's standing ability to read anything is zero. There is no master
     key, no per-user key, no recovery flow. The ciphertext sits in MongoDB
-    alongside the URL identifier and the expiry, and that's it. When a
-    recipient submits the passcode, the server uses it once to run the AES
-    decrypt in memory, returns the plaintext to the recipient over HTTPS, and
-    immediately deletes the record. The passcode is never persisted; the
-    plaintext exists for the duration of the request and never afterward.
+    alongside the URL identifier and the expiry, and that's it. When the
+    recipient hits the link, the server returns the ciphertext, marks the
+    record as viewed (starting a short grace window for refreshes), and never
+    sees what happens next. The recipient's browser runs the AES decrypt
+    locally; the passcode never leaves their device. Once the plaintext is on
+    screen the client calls <code>DELETE /api/secret/:url</code> and the
+    record is purged. The passcode is never logged, never transmitted, never
+    persisted. The plaintext only ever exists on the two browsers at the ends
+    of the exchange.
   </p>
   <p>
-    This is the security trade-off worth being clear about: the server is
-    <em>trusted to perform decryption on request</em>, even though it has no
-    standing ability to read what it stores. Moving the decrypt step into the
-    recipient's browser (so the passcode never reaches the server at all) is
-    the most important future change. More on that below.
+    A 60-second grace window after the first fetch tolerates page refreshes
+    during the decrypt UX. After that the record self-cleans on the next
+    access attempt, with a cron sweep as belt-and-braces backup. Either way
+    the link works exactly once.
   </p>
 
   <h3>One-time access, mandatory expiry</h3>
@@ -128,7 +131,7 @@ const links = [
 
   <h3>Brute-force protection and bot defence</h3>
   <p>
-    Three failed passcode attempts lock a record for an hour. The decrypt and
+    Brute-force resistance is structural rather than tracked. An attacker would need both the URL <em>and</em> the passcode, and the URL is one-shot: a single fetch starts a 60-second grace window after which the record is purged regardless of whether anyone managed to decrypt it. That leaves an attacker with at most a minute of offline attempts against a ciphertext they can't re-acquire. The decrypt and
     encrypt routes are individually rate-limited (5 and 10 requests per minute
     respectively) to slow scraping. Forms run behind Google reCAPTCHA, and a
     cron job sweeps expired records on a schedule. None of these are exotic,
@@ -181,8 +184,8 @@ const links = [
 
   <div class="outcome-grid">
     <div>
-      <strong>Zero</strong>
-      <span>Passcodes or plaintext persisted on the server</span>
+      <strong>Zero-knowledge</strong>
+      <span>Server cannot read what it stores; passcode never leaves the sender or recipient</span>
     </div>
     <div>
       <strong>One view</strong>
@@ -211,23 +214,22 @@ const links = [
   <h2>What I'd do differently</h2>
 
   <p>
-    The biggest improvement I'd ship is moving the decrypt step into the
-    recipient's browser. Today the passcode is submitted to the server, used
-    once, and discarded; the cryptography is correct but the server is a trust
-    boundary that doesn't need to exist. A version where the recipient's
-    browser fetches the ciphertext, decrypts it locally with the passcode the
-    sender shared, and the server is never asked to perform the AES step,
-    would shrink the trusted-server window to zero. This is the change that
-    moves locc.it from "the server has no standing ability to read" to "the
-    server cannot read."
+    I'd document the security model openly. Publish exactly how a secret is
+    protected end-to-end, so the model is something a visitor can verify
+    rather than take on faith. For a tool whose entire pitch is trust,
+    "it's encrypted" should be a claim anyone can check, not one they have
+    to believe. The architecture is there to support that audit; the
+    write-up just isn't.
   </p>
 
   <p>
-    Alongside that, I'd document the security model openly: publish exactly
-    how a secret is protected end-to-end, so the model is something a visitor
-    can verify rather than take on faith. For a tool whose entire pitch is
-    trust, "it's encrypted" should be a claim anyone can check, not one they
-    have to believe.
+    I'd also harden the recipient UX around lost passcodes. Today a wrong
+    passcode shows a generic "incorrect passcode" message and the recipient
+    keeps trying. With a stronger entropy passcode (longer, more diverse
+    character set) and a small client-side hash check against a known prefix,
+    typos could be distinguished from "the wrong link", which would help the
+    recipient ask the sender for the right thing instead of burning their
+    own attempt window.
   </p>
 
   <p>
