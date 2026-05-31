@@ -14,7 +14,7 @@ const links = [
   tag="Personal"
   role="Sole engineer & designer"
   timeframe="2019 – Present"
-  stack="React · Express · MongoDB · CryptoJS"
+  stack="React · Express · SQLite · CryptoJS"
   oneliner="A zero-knowledge one-time secret sharing tool. The sender encrypts in the browser with a generated passcode, the server stores only the ciphertext on a deadline, and the recipient decrypts in their own browser before the record is deleted. The passcode never touches the server."
   links={links}
 >
@@ -56,10 +56,11 @@ const links = [
   <h2>The architecture</h2>
 
   <p>
-    locc.it is a React frontend and an Express + MongoDB backend. The shape of
-    the security model matters more than the stack: the browser handles both
-    encryption <em>and</em> decryption, the server only ever holds opaque
-    ciphertext, and nothing sensitive is persisted on the server, ever.
+    locc.it is a React frontend and an Express + SQLite backend running on a
+    single VPS. The shape of the security model matters more than the stack:
+    the browser handles both encryption <em>and</em> decryption, the server
+    only ever holds opaque ciphertext, and nothing sensitive is persisted on
+    the server, ever.
   </p>
 
   <Diagram title="Life of a secret">
@@ -72,7 +73,7 @@ const links = [
         </div>
         <div class="overview-arrow">↓</div>
         <div class="overview-tier">
-          <DiagramNode label="MongoDB" sublabel="ciphertext + URL + expiry" tier="accent" size="lg" />
+          <DiagramNode label="SQLite" sublabel="ciphertext + URL + expiry" tier="accent" size="lg" />
           <DiagramNode label="GET /api/secret/:url" sublabel="returns ciphertext, marks viewed" tier="accent" size="lg" />
           <DiagramNode label="Recipient's browser decrypts" sublabel="CryptoJS, passcode never sent" tier="accent" size="lg" />
         </div>
@@ -99,8 +100,8 @@ const links = [
   <h3>What the server actually does</h3>
   <p>
     The server's standing ability to read anything is zero. There is no master
-    key, no per-user key, no recovery flow. The ciphertext sits in MongoDB
-    alongside the URL identifier and the expiry, and that's it. When the
+    key, no per-user key, no recovery flow. The ciphertext sits in a local
+    SQLite file alongside the URL identifier and the expiry, and that's it. When the
     recipient hits the link, the server returns the ciphertext, marks the
     record as viewed (starting a short grace window for refreshes), and never
     sees what happens next. The recipient's browser runs the AES decrypt
@@ -178,6 +179,21 @@ const links = [
     need to share credentials safely aren't all developers, and a tool only
     improves security if the least technical person in the exchange will
     actually use it.
+  </p>
+
+  <h3>SQLite over MongoDB Atlas</h3>
+  <p>
+    locc.it ran on MongoDB Atlas for years. Migrating to embedded
+    <strong>SQLite via better-sqlite3</strong> removed an entire trust
+    boundary, a managed-service dependency, and a network hop. The data
+    shape is tiny (URL, ciphertext, expiry, viewed flags), the workload is
+    a handful of inserts and lookups per minute, and the cleanup is an
+    hourly sweep over a few hundred rows. None of that needs a separate
+    database service, let alone a managed cluster. The replacement is one
+    Node process, one <code>.db</code> file, and the same Express routes
+    using prepared statements instead of an ORM. For a tool whose pitch is
+    "the server holds nothing useful," the right database is the smallest
+    one that does the job.
   </p>
 
   <h2>Outcomes</h2>
